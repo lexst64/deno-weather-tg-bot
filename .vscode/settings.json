@@ -1,5 +1,4 @@
 {
   "deno.enable": true,
-  "deno.unstable": true,
-  "todo-tree.tree.scanMode": "workspace only"
+  "deno.unstable": true
 }
