@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "strict": true,
-    "target": "esnext",
-    "moduleResolution": "force",
-    "module": "esnext"
+    "strict": true
+  },
+  "tasks": {
+    "start": "deno run --allow-read --allow-env --allow-net ./src/index.ts"
   },
   "fmt": {
     "files": {
