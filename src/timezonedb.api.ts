@@ -9,7 +9,9 @@ export class TimezoneDB {
   }
 
   async localTime(lat: number, lon: number): Promise<any> {
-    const res = await fetch(`${TimezoneDB.API_URL}/v2.1/get-time-zone?key=${this.apiToken}&format=json&by=position&lat=${lat}&lng=${lon}`)
+    const res = await fetch(
+      `${TimezoneDB.API_URL}/v2.1/get-time-zone?key=${this.apiToken}&format=json&by=position&lat=${lat}&lng=${lon}`,
+    );
     if (res.ok) {
       const data = await res.json();
       console.log(data);
