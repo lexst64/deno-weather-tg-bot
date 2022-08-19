@@ -27,3 +27,7 @@ export const processCallbackQuery = (...processors: CallbackProcessor[]) => {
     }
   };
 };
+
+export const hoursToMs = (hours: number) => hours * 3600 * 1000;
+
+export const minutesToMs = (minutes: number) => minutes * 60 * 1000;
