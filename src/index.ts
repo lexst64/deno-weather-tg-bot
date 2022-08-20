@@ -16,12 +16,13 @@ import {
 import {
   CallbackProcessor,
   ContextType,
-  hoursToMs,
+  hoursToMs,t
   minutesToMs,
+  msToTime,
   processCallbackQuery,
 } from './helpers.ts';
 import { Openweathermap, ReverseGeocoding } from './openweather.api.ts';
-import { TimezoneDB } from './timezonedb.api.ts';
+import { TimeApi } from './time.api.ts';
 
 const BOT_TOKEN = Deno.env.get('BOT_TOKEN');
 const OPENWEATHER_API = Deno.env.get('OPENWEATHER_API');
@@ -31,7 +32,7 @@ if (!OPENWEATHER_API) throw new Error('no openweather api token');
 if (!TIMEZONEDB_TOKEN) throw new Error('no timezonedb api token');
 
 export const openweathermap = new Openweathermap(OPENWEATHER_API, 'metric');
-const timezonedb = new TimezoneDB(TIMEZONEDB_TOKEN);
+const timeApi = new TimeApi();
 
 export interface Location {
   id: string;
@@ -174,7 +175,7 @@ export const calcTimeDiff = (time1: Time, time2: Time): number => {
   date2.setHours(time2.hours);
   date2.setMinutes(time2.minutes);
 
-  if (date1 > date2) {
+  if (date1 >= date2) {
     date2.setDate(date2.getDate() + 1);
   }
   // @ts-ignore: it's possible to subtract Date objects
@@ -186,6 +187,10 @@ bot.command('add_notif_time', async (ctx) => {
 });
 
 bot.command('notif_on', async (ctx) => {
+	if (ctx.session.timeoutId != 0) {
+		await ctx.reply('notificaitons already turned on');
+		return;
+	}
   if (!ctx.session.locations.length) {
     await ctx.reply('you have no saved locations: /add_location');
     return;
@@ -198,28 +203,38 @@ bot.command('notif_on', async (ctx) => {
   let data;
   try {
     const location = ctx.session.locations[0];
-    data = await timezonedb.localTime(location.lat, location.lon);
+    data = await timeApi.currentTime(location.lat, location.lon);
   } catch (error) {
     console.error(error);
     return;
   }
 
-  const userDate = new Date(data.formatted);
-  const currentTime: Time = { hours: userDate.getHours(), minutes: userDate.getMinutes() };
+  const userDate = new Date(data.dateTime);
+  const userTime: Time = { hours: userDate.getHours(), minutes: userDate.getMinutes() };
   // test
   const { notifTime, timeDiff } = ctx.session.notifTimes
-    .map((time) => ({ timeDiff: calcTimeDiff(currentTime, time), notifTime: time }))
+    .map((time) => ({ timeDiff: calcTimeDiff(userTime, time), notifTime: time }))
     .sort((a, b) => a.timeDiff - b.timeDiff)[0];
 
-  const timeoutNotificaiton = (notifTime: Time) => {
-    weatherNow(ctx);
-    const { notifTime: nextNotifTime, timeDiff } = ctx.session.notifTimes
-      .map((time) => ({ timeDiff: calcTimeDiff(notifTime, time), notifTime: time }))
-      .sort((a, b) => a.timeDiff - b.timeDiff)[0];
-    ctx.session.timeoutId = setTimeout(() => timeoutNotificaiton(nextNotifTime), timeDiff);
+  const timeoutNotification = (notifTime: Time, timeDiff: number) => {
+    if (!ctx.session.notifTimes.length) return;
+
+		ctx.session.timeoutId = setTimeout(() => {
+			weatherNow(ctx);
+			const { notifTime: nextNotifTime, nextTimeDiff } = ctx.session.notifTimes
+				.map((time) => ({ nextTimeDiff: calcTimeDiff(notifTime, time), notifTime: time }))
+				.sort((a, b) => a.nextTimeDiff - b.nextTimeDiff)[0];
+			timeoutNotification(nextNotifTime, nextTimeDiff);
+		}, timeDiff);
   };
 
-  ctx.session.timeoutId = setTimeout(() => timeoutNotificaiton(notifTime), timeDiff);
+  timeoutNotification(notifTime, timeDiff);
+
+	const timeLeft: Time = msToTime(timeDiff);
+	await ctx.reply(`
+Notifications on.
+${timeLeft.hours > 0 ? timeLeft.hours + 'h ' : ''}${timeLeft.minutes}min left till the next notification
+	`)
 });
 
 bot.command('notif_off', async (ctx) => {

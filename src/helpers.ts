@@ -1,5 +1,5 @@
 import { Filter } from 'https://deno.land/x/grammy@v1.10.1/filter.ts';
-import { MyContext } from './index.ts';
+import { MyContext, Time } from './index.ts';
 
 export interface CallbackProcessor {
   dataRegex: string | RegExp;
@@ -31,3 +31,12 @@ export const processCallbackQuery = (...processors: CallbackProcessor[]) => {
 export const hoursToMs = (hours: number) => hours * 3600 * 1000;
 
 export const minutesToMs = (minutes: number) => minutes * 60 * 1000;
+
+export const msToTime = (milliseconds: number): Time => {
+  const hours = milliseconds / 3600000;
+  if (!Number.isInteger(hours)) {
+    const int = parseInt(hours.toString());
+    return { hours: int, minutes: Math.round((hours - int) * 60) };
+  }
+  return { hours, minutes: 0 };
+}
