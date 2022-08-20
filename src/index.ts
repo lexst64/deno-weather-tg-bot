@@ -13,7 +13,7 @@ import {
   conversations,
   createConversation,
 } from 'https://deno.land/x/grammy_conversations@v1.0.2/conversation.ts';
-import { CallbackProcessor, ContextType, msToTime, processCallbackQuery } from './helpers.ts';
+import { msToTime, processCallbackQuery } from './helpers.ts';
 import { Openweathermap, ReverseGeocoding } from './openweather.api.ts';
 import { TimeApi } from './time.api.ts';
 
@@ -137,7 +137,7 @@ bot.command('add_location', async (ctx) => {
   await ctx.conversation.reenter('addLocation');
 });
 
-const weatherNow = (ctx: CommandContext<MyContext>) => {
+const currentWeather = (ctx: CommandContext<MyContext>) => {
   ctx.session.locations.forEach(async ({ lat, lon }: Location) => {
     const data = await openweathermap.currentWeather(lat, lon);
     const locationName = await fetchLocationName(lat, lon);
@@ -154,7 +154,7 @@ Cloudiness: ${data.clouds.all}
   });
 };
 
-bot.command('weather_now', weatherNow);
+bot.command('weather_now', currentWeather);
 
 /**
  * @returns time difference in milliseconds
@@ -213,7 +213,7 @@ bot.command('notif_on', async (ctx) => {
     if (!ctx.session.notifTimes.length) return;
 
     ctx.session.timeoutId = setTimeout(() => {
-      weatherNow(ctx);
+      currentWeather(ctx);
       const { notifTime: nextNotifTime, nextTimeDiff } = ctx.session.notifTimes
         .map((time) => ({ nextTimeDiff: calcTimeDiff(notifTime, time), notifTime: time }))
         .sort((a, b) => a.nextTimeDiff - b.nextTimeDiff)[0];
@@ -253,9 +253,9 @@ bot.command('notif_times', async (ctx) => {
 
 const UUIDRegex = /[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}/;
 
-const deleteProcessor: CallbackProcessor = {
-  dataRegex: new RegExp(`^delete_location#${UUIDRegex.source}$`),
-  execute: async (ctx: ContextType) => {
+bot.callbackQuery(
+  new RegExp(`^delete_location#${UUIDRegex.source}$`),
+  processCallbackQuery(async (ctx) => {
     const locationId = ctx.callbackQuery.data.split('#')[1];
     ctx.session.locations = ctx.session.locations.filter((location: Location) =>
       location.id !== locationId
@@ -264,14 +264,12 @@ const deleteProcessor: CallbackProcessor = {
     const message: Message | undefined = ctx.callbackQuery.message;
     if (message) await ctx.deleteMessage();
     await ctx.answerCallbackQuery({ text: 'location has been deleted' });
-  },
-};
+  }),
+);
 
-bot.on('callback_query:data', processCallbackQuery(deleteProcessor));
+bot.start({ onStart: () => console.log('bot has been started') });
 
 bot.catch((err) => {
   console.log('something went wrong');
   console.error(err);
 });
-
-bot.start();

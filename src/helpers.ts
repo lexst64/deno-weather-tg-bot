@@ -1,20 +1,12 @@
 import { Filter } from 'https://deno.land/x/grammy@v1.10.1/filter.ts';
 import { MyContext, Time } from './index.ts';
 
-export interface CallbackProcessor {
-  dataRegex: string | RegExp;
-  execute: (ctx: ContextType) => Promise<void>;
-}
+type ContextType = Filter<MyContext, 'callback_query:data'>;
 
-export type ContextType = Filter<MyContext, 'callback_query:data'>;
-
-export const processCallbackQuery = (...processors: CallbackProcessor[]) => {
+export const processCallbackQuery = (middleware: (ctx: ContextType) => Promise<void>) => {
   return async (ctx: ContextType) => {
-    const processor = processors.find((p) => ctx.callbackQuery.data.match(p.dataRegex));
-    if (!processor) return;
-
     try {
-      await processor.execute(ctx);
+      await middleware(ctx);
     } catch (err) {
       console.error(`
         error occured while processing callback query "${ctx.callbackQuery}";
