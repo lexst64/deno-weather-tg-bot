@@ -13,14 +13,7 @@ import {
   conversations,
   createConversation,
 } from 'https://deno.land/x/grammy_conversations@v1.0.2/conversation.ts';
-import {
-  CallbackProcessor,
-  ContextType,
-  hoursToMs,t
-  minutesToMs,
-  msToTime,
-  processCallbackQuery,
-} from './helpers.ts';
+import { CallbackProcessor, ContextType, msToTime, processCallbackQuery } from './helpers.ts';
 import { Openweathermap, ReverseGeocoding } from './openweather.api.ts';
 import { TimeApi } from './time.api.ts';
 
@@ -187,10 +180,10 @@ bot.command('add_notif_time', async (ctx) => {
 });
 
 bot.command('notif_on', async (ctx) => {
-	if (ctx.session.timeoutId != 0) {
-		await ctx.reply('notificaitons already turned on');
-		return;
-	}
+  if (ctx.session.timeoutId != 0) {
+    await ctx.reply('notificaitons already turned on');
+    return;
+  }
   if (!ctx.session.locations.length) {
     await ctx.reply('you have no saved locations: /add_location');
     return;
@@ -219,22 +212,26 @@ bot.command('notif_on', async (ctx) => {
   const timeoutNotification = (notifTime: Time, timeDiff: number) => {
     if (!ctx.session.notifTimes.length) return;
 
-		ctx.session.timeoutId = setTimeout(() => {
-			weatherNow(ctx);
-			const { notifTime: nextNotifTime, nextTimeDiff } = ctx.session.notifTimes
-				.map((time) => ({ nextTimeDiff: calcTimeDiff(notifTime, time), notifTime: time }))
-				.sort((a, b) => a.nextTimeDiff - b.nextTimeDiff)[0];
-			timeoutNotification(nextNotifTime, nextTimeDiff);
-		}, timeDiff);
+    ctx.session.timeoutId = setTimeout(() => {
+      weatherNow(ctx);
+      const { notifTime: nextNotifTime, nextTimeDiff } = ctx.session.notifTimes
+        .map((time) => ({ nextTimeDiff: calcTimeDiff(notifTime, time), notifTime: time }))
+        .sort((a, b) => a.nextTimeDiff - b.nextTimeDiff)[0];
+      timeoutNotification(nextNotifTime, nextTimeDiff);
+    }, timeDiff);
   };
 
   timeoutNotification(notifTime, timeDiff);
 
-	const timeLeft: Time = msToTime(timeDiff);
-	await ctx.reply(`
+  const timeLeft: Time = msToTime(timeDiff);
+  await ctx.reply(`
 Notifications on.
-${timeLeft.hours > 0 ? timeLeft.hours + 'h ' : ''}${timeLeft.minutes}min left till the next notification
-	`)
+${
+    timeLeft.hours > 0
+      ? timeLeft.hours + 'h '
+      : ''
+  }${timeLeft.minutes}min left till the next notification
+	`);
 });
 
 bot.command('notif_off', async (ctx) => {

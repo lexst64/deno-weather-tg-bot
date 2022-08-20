@@ -28,10 +28,6 @@ export const processCallbackQuery = (...processors: CallbackProcessor[]) => {
   };
 };
 
-export const hoursToMs = (hours: number) => hours * 3600 * 1000;
-
-export const minutesToMs = (minutes: number) => minutes * 60 * 1000;
-
 export const msToTime = (milliseconds: number): Time => {
   const hours = milliseconds / 3600000;
   if (!Number.isInteger(hours)) {
@@ -39,4 +35,4 @@ export const msToTime = (milliseconds: number): Time => {
     return { hours: int, minutes: Math.round((hours - int) * 60) };
   }
   return { hours, minutes: 0 };
-}
+};
