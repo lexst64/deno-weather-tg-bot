@@ -28,3 +28,35 @@ export const msToTime = (milliseconds: number): Time => {
   }
   return { hours, minutes: 0 };
 };
+
+/**
+ * @returns time difference in milliseconds
+ */
+export const calcTimeDiff = (time1: Time, time2: Time): number => {
+  const date1 = new Date();
+  date1.setHours(time1.hours);
+  date1.setMinutes(time1.minutes);
+
+  const date2 = new Date();
+  date2.setHours(time2.hours);
+  date2.setMinutes(time2.minutes);
+
+  if (date1 >= date2) {
+    date2.setDate(date2.getDate() + 1);
+  }
+  // @ts-ignore: it's possible to subtract Date objects
+  return date2 - date1;
+};
+
+/**
+ * Finds the nearest time from the provided `times` to the provided `baseTime`.
+ *
+ * @param baseTime the time relative to which the provided times are compared.
+ * @param times the times that are compared to the `baseTime`
+ * @returns {Time} the found time from the `times`
+ */
+export const findNearestTime = (baseTime: Time, times: Time[]): Time => {
+  return times
+    .map((time) => ({ diff: calcTimeDiff(baseTime, time), time }))
+    .sort((a, b) => a.diff - b.diff)[0].time;
+};

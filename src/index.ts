@@ -13,7 +13,7 @@ import {
   conversations,
   createConversation,
 } from 'https://deno.land/x/grammy_conversations@v1.0.2/conversation.ts';
-import { msToTime, processCallbackQuery } from './helpers.ts';
+import { calcTimeDiff, findNearestTime, msToTime, processCallbackQuery } from './helpers.ts';
 import { Openweathermap, ReverseGeocoding } from './openweather.api.ts';
 import { TimeApi } from './time.api.ts';
 
@@ -156,25 +156,6 @@ Cloudiness: ${data.clouds.all}
 
 bot.command('weather_now', currentWeather);
 
-/**
- * @returns time difference in milliseconds
- */
-export const calcTimeDiff = (time1: Time, time2: Time): number => {
-  const date1 = new Date();
-  date1.setHours(time1.hours);
-  date1.setMinutes(time1.minutes);
-
-  const date2 = new Date();
-  date2.setHours(time2.hours);
-  date2.setMinutes(time2.minutes);
-
-  if (date1 >= date2) {
-    date2.setDate(date2.getDate() + 1);
-  }
-  // @ts-ignore: it's possible to subtract Date objects
-  return date2 - date1;
-};
-
 bot.command('add_notif_time', async (ctx) => {
   await ctx.conversation.reenter('addNotifTime');
 });
@@ -201,27 +182,22 @@ bot.command('notif_on', async (ctx) => {
     console.error(error);
     return;
   }
-
   const userDate = new Date(data.dateTime);
   const userTime: Time = { hours: userDate.getHours(), minutes: userDate.getMinutes() };
-  // test
-  const { notifTime, timeDiff } = ctx.session.notifTimes
-    .map((time) => ({ timeDiff: calcTimeDiff(userTime, time), notifTime: time }))
-    .sort((a, b) => a.timeDiff - b.timeDiff)[0];
+  const notifTime: Time = findNearestTime(userTime, ctx.session.notifTimes);
 
-  const timeoutNotification = (notifTime: Time, timeDiff: number) => {
+  const setNotificationTimeout = (notifTime: Time, delay: number) => {
     if (!ctx.session.notifTimes.length) return;
 
     ctx.session.timeoutId = setTimeout(() => {
       currentWeather(ctx);
-      const { notifTime: nextNotifTime, nextTimeDiff } = ctx.session.notifTimes
-        .map((time) => ({ nextTimeDiff: calcTimeDiff(notifTime, time), notifTime: time }))
-        .sort((a, b) => a.nextTimeDiff - b.nextTimeDiff)[0];
-      timeoutNotification(nextNotifTime, nextTimeDiff);
-    }, timeDiff);
+      const nextNotifTime: Time = findNearestTime(notifTime, ctx.session.notifTimes);
+      setNotificationTimeout(nextNotifTime, calcTimeDiff(notifTime, nextNotifTime));
+    }, delay);
   };
 
-  timeoutNotification(notifTime, timeDiff);
+  const timeDiff = calcTimeDiff(userTime, notifTime);
+  setNotificationTimeout(notifTime, timeDiff);
 
   const timeLeft: Time = msToTime(timeDiff);
   await ctx.reply(`
@@ -241,6 +217,7 @@ bot.command('notif_off', async (ctx) => {
   }
   clearTimeout(ctx.session.timeoutId);
   ctx.session.timeoutId = 0;
+  await ctx.reply('All notifications have been turned off');
 });
 
 bot.command('notif_times', async (ctx) => {
