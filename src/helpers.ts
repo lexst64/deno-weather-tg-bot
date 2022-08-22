@@ -1,10 +1,11 @@
 import { Filter } from 'https://deno.land/x/grammy@v1.10.1/filter.ts';
-import { MyContext, Time } from './index.ts';
+import { InlineKeyboardMarkup } from 'https://deno.land/x/grammy@v1.10.1/platform.deno.ts';
+import { BotContext, Time } from './types.ts';
 
-type ContextType = Filter<MyContext, 'callback_query:data'>;
+type CallbackQueryContext = Filter<BotContext, 'callback_query:data'>;
 
-export const processCallbackQuery = (middleware: (ctx: ContextType) => Promise<void>) => {
-  return async (ctx: ContextType) => {
+export const processCallbackQuery = (middleware: (ctx: CallbackQueryContext) => Promise<void>) => {
+  return async (ctx: CallbackQueryContext) => {
     try {
       await middleware(ctx);
     } catch (err) {
@@ -13,7 +14,7 @@ export const processCallbackQuery = (middleware: (ctx: ContextType) => Promise<v
         error: ${err}
       `);
 
-      // answer callback query whenever error is occurs to prevent
+      // it's important to answer callback query whenever error is occured to prevent
       // unresponsive bot behavior (e.g. long loading after pressing inline keyboard button)
       ctx.answerCallbackQuery({ text: 'error on server', show_alert: true });
     }
@@ -31,6 +32,9 @@ export const msToTime = (milliseconds: number): Time => {
 
 /**
  * @returns time difference in milliseconds
+ *
+ * TODO: add `seconds` field into `Time` interface
+ * to calculate time difference more accurately
  */
 export const calcTimeDiff = (time1: Time, time2: Time): number => {
   const date1 = new Date();
@@ -59,4 +63,14 @@ export const findNearestTime = (baseTime: Time, times: Time[]): Time => {
   return times
     .map((time) => ({ diff: calcTimeDiff(baseTime, time), time }))
     .sort((a, b) => a.diff - b.diff)[0].time;
+};
+
+export const createLocationReplyMarkup = (locationId: string): InlineKeyboardMarkup => {
+  return {
+    inline_keyboard: [
+      [
+        { text: 'delete', callback_data: `delete_location#${locationId}` },
+      ],
+    ],
+  };
 };

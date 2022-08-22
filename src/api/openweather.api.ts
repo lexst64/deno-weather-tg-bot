@@ -31,10 +31,16 @@ export class Openweathermap {
   }
 
   // todo: implement returned interface
-  async currentWeather(lat: number, lon: number) {
+  async currentWeather(lat: number, lon: number): Promise<any> {
     const res = await fetch(
       `${Openweathermap.apiUrl}/data/2.5/weather?lat=${lat}&lon=${lon}&units=${this.units}&appid=${this.apiToken}`,
     );
     return await res.json();
+  }
+
+  async locationName(lat: number, lon: number): Promise<string> {
+    const data: ReverseGeocoding[] = await this.reverseGeocoding(lat, lon);
+    const { name: city, state, country } = data[0];
+    return state ? `${city}, ${state}, ${country}` : `${city}, ${country}`;
   }
 }
