@@ -14,6 +14,7 @@ export interface Location {
 export interface Time {
   hours: number;
   minutes: number;
+  seconds: number;
 }
 
 export interface SessionData {

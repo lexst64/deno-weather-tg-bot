@@ -14,10 +14,7 @@ composer.callbackQuery(
       location.id !== locationId
     );
 
-    const message = ctx.callbackQuery.message;
-    // TODO: edit message text and delete reply markup
-    // intead of deleting message
-    if (message) await ctx.deleteMessage();
+    await ctx.editMessageText('<i>location deleted</i>', { parse_mode: 'HTML' });
     await ctx.answerCallbackQuery({ text: 'location has been deleted' });
   }),
 );

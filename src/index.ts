@@ -3,18 +3,16 @@ import { Bot, session } from 'https://deno.land/x/grammy@v1.10.1/mod.ts';
 import { callbackQueryComposer } from './composers/callbackQueries.ts';
 import { commandComposer } from './composers/commands.ts';
 import { conversationComposer } from './composers/conversations.ts';
-import { Openweathermap } from './api/openweather.api.ts';
-import { TimeApi } from './api/time.api.ts';
+import { Openweathermap } from './api/openweather/api.ts';
+import { TimeApi } from './api/time/api.ts';
 import { BotContext, SessionData } from './types.ts';
 
 const BOT_TOKEN = Deno.env.get('BOT_TOKEN');
-const OPENWEATHER_API = Deno.env.get('OPENWEATHER_API');
-const TIMEZONEDB_TOKEN = Deno.env.get('TIMEZONEDB_TOKEN');
+const OPENWEATHER_TOKEN = Deno.env.get('OPENWEATHER_API');
 if (!BOT_TOKEN) throw new Error('no bot token');
-if (!OPENWEATHER_API) throw new Error('no openweather api token');
-if (!TIMEZONEDB_TOKEN) throw new Error('no timezonedb api token');
+if (!OPENWEATHER_TOKEN) throw new Error('no openweather api token');
 
-export const openweathermap = new Openweathermap(OPENWEATHER_API, 'metric');
+export const openweathermap = new Openweathermap(OPENWEATHER_TOKEN, 'metric');
 export const timeApi = new TimeApi();
 
 export const bot = new Bot<BotContext>(BOT_TOKEN);
@@ -25,8 +23,15 @@ bot.use(session({
     notifTimes: [],
     timeoutId: 0,
   }),
-  // TODO: check if ctx.from is undefined
-  getSessionKey: (ctx) => ctx.from?.id.toString(),
+  /**
+   * Gives every user their one personal session storage per chat with the bot
+   * (an independent session for each group and their private chat)
+   */
+  getSessionKey: (ctx) => {
+    return ctx.from === undefined || ctx.chat === undefined
+      ? undefined
+      : `${ctx.from.id}/${ctx.chat.id}`;
+  },
 }));
 
 bot.use(conversationComposer);

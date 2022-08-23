@@ -1,5 +1,6 @@
 import { Composer } from 'https://deno.land/x/grammy@v1.10.1/composer.ts';
 import { CommandContext } from 'https://deno.land/x/grammy@v1.10.1/context.ts';
+import { CurrentDateTime } from '../api/time/types.ts';
 import { calcTimeDiff, createLocationReplyMarkup, findNearestTime, msToTime } from '../helpers.ts';
 import { openweathermap, timeApi } from '../index.ts';
 import { BotContext, Location, Time } from '../types.ts';
@@ -56,7 +57,7 @@ composer.command('notif_on', async (ctx) => {
     return;
   }
 
-  let data;
+  let data: CurrentDateTime;
   try {
     /**
      * By default, the first added location is retrieved to be
@@ -70,11 +71,16 @@ composer.command('notif_on', async (ctx) => {
     data = await timeApi.currentTime(location.lat, location.lon);
   } catch (error) {
     console.error(error);
+    await ctx.reply('Unable to turn on notifications :( Something went wrong');
     return;
   }
 
   const userDate = new Date(data.dateTime);
-  const userTime: Time = { hours: userDate.getHours(), minutes: userDate.getMinutes() };
+  const userTime: Time = {
+    hours: userDate.getHours(),
+    minutes: userDate.getMinutes(),
+    seconds: userDate.getSeconds(),
+  };
   const notifTime: Time = findNearestTime(userTime, ctx.session.notifTimes);
 
   const setNotificationTimeout = (notifTime: Time, delay: number) => {
@@ -93,11 +99,9 @@ composer.command('notif_on', async (ctx) => {
   const timeLeft: Time = msToTime(timeDiff);
   await ctx.reply(`
 Notifications on.
-${
-    timeLeft.hours > 0
-      ? timeLeft.hours + 'h '
-      : ''
-  }${timeLeft.minutes}min left till the next notification
+${timeLeft.hours > 0 ? timeLeft.hours + ' hr ' : ''}${
+    timeLeft.minutes > 0 ? timeLeft.minutes + ' min ' : ''
+  }${timeLeft.seconds > 0 ? timeLeft.seconds + ' sec ' : ''} left till the next notification
   `);
 });
 

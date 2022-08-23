@@ -56,6 +56,7 @@ const addNotifTime = async (conversation: BotConversation, ctx: BotContext) => {
   ctx.session.notifTimes.push({
     hours: parseInt(time.split(':')[0]),
     minutes: parseInt(time.split(':')[1]),
+    seconds: 0,
   });
   await ctx.reply(`Time '${time}' has been added to notification time list: /notif_times`);
 };

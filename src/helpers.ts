@@ -22,32 +22,43 @@ export const processCallbackQuery = (middleware: (ctx: CallbackQueryContext) => 
 };
 
 export const msToTime = (milliseconds: number): Time => {
-  const hours = milliseconds / 3600000;
+  let hours = milliseconds / 3600000;
+  let minutes = 0;
+  let seconds = 0;
+
   if (!Number.isInteger(hours)) {
     const int = parseInt(hours.toString());
-    return { hours: int, minutes: Math.round((hours - int) * 60) };
+    minutes = (hours - int) * 60;
+    hours = int;
   }
-  return { hours, minutes: 0 };
+  if (!Number.isInteger(minutes)) {
+    const int = parseInt(minutes.toString());
+    seconds = Math.round((minutes - int) * 60);
+    minutes = int;
+  }
+
+  return { hours, minutes, seconds };
+};
+
+export const timeToDate = (time: Time) => {
+  const date = new Date();
+  date.setHours(time.hours);
+  date.setMinutes(time.minutes);
+  date.setSeconds(time.seconds);
+  return date;
 };
 
 /**
- * @returns time difference in milliseconds
- *
- * TODO: add `seconds` field into `Time` interface
- * to calculate time difference more accurately
+ * @returns difference beetween two times in milliseconds
  */
 export const calcTimeDiff = (time1: Time, time2: Time): number => {
-  const date1 = new Date();
-  date1.setHours(time1.hours);
-  date1.setMinutes(time1.minutes);
-
-  const date2 = new Date();
-  date2.setHours(time2.hours);
-  date2.setMinutes(time2.minutes);
+  const date1 = timeToDate(time1);
+  const date2 = timeToDate(time2);
 
   if (date1 >= date2) {
     date2.setDate(date2.getDate() + 1);
   }
+
   // @ts-ignore: it's possible to subtract Date objects
   return date2 - date1;
 };
