@@ -1,10 +1,11 @@
 import { Filter } from 'https://deno.land/x/grammy@v1.10.1/filter.ts';
-import { MyContext, Time } from './index.ts';
+import { InlineKeyboardMarkup } from 'https://deno.land/x/grammy@v1.10.1/platform.deno.ts';
+import { BotContext, Time } from './types.ts';
 
-type ContextType = Filter<MyContext, 'callback_query:data'>;
+type CallbackQueryContext = Filter<BotContext, 'callback_query:data'>;
 
-export const processCallbackQuery = (middleware: (ctx: ContextType) => Promise<void>) => {
-  return async (ctx: ContextType) => {
+export const processCallbackQuery = (middleware: (ctx: CallbackQueryContext) => Promise<void>) => {
+  return async (ctx: CallbackQueryContext) => {
     try {
       await middleware(ctx);
     } catch (err) {
@@ -13,7 +14,7 @@ export const processCallbackQuery = (middleware: (ctx: ContextType) => Promise<v
         error: ${err}
       `);
 
-      // answer callback query whenever error is occurs to prevent
+      // it's important to answer callback query whenever error is occured to prevent
       // unresponsive bot behavior (e.g. long loading after pressing inline keyboard button)
       ctx.answerCallbackQuery({ text: 'error on server', show_alert: true });
     }
@@ -21,29 +22,43 @@ export const processCallbackQuery = (middleware: (ctx: ContextType) => Promise<v
 };
 
 export const msToTime = (milliseconds: number): Time => {
-  const hours = milliseconds / 3600000;
+  let hours = milliseconds / 3600000;
+  let minutes = 0;
+  let seconds = 0;
+
   if (!Number.isInteger(hours)) {
     const int = parseInt(hours.toString());
-    return { hours: int, minutes: Math.round((hours - int) * 60) };
+    minutes = (hours - int) * 60;
+    hours = int;
   }
-  return { hours, minutes: 0 };
+  if (!Number.isInteger(minutes)) {
+    const int = parseInt(minutes.toString());
+    seconds = Math.round((minutes - int) * 60);
+    minutes = int;
+  }
+
+  return { hours, minutes, seconds };
+};
+
+export const timeToDate = (time: Time) => {
+  const date = new Date();
+  date.setHours(time.hours);
+  date.setMinutes(time.minutes);
+  date.setSeconds(time.seconds);
+  return date;
 };
 
 /**
- * @returns time difference in milliseconds
+ * @returns difference beetween two times in milliseconds
  */
 export const calcTimeDiff = (time1: Time, time2: Time): number => {
-  const date1 = new Date();
-  date1.setHours(time1.hours);
-  date1.setMinutes(time1.minutes);
-
-  const date2 = new Date();
-  date2.setHours(time2.hours);
-  date2.setMinutes(time2.minutes);
+  const date1 = timeToDate(time1);
+  const date2 = timeToDate(time2);
 
   if (date1 >= date2) {
     date2.setDate(date2.getDate() + 1);
   }
+
   // @ts-ignore: it's possible to subtract Date objects
   return date2 - date1;
 };
@@ -59,4 +74,14 @@ export const findNearestTime = (baseTime: Time, times: Time[]): Time => {
   return times
     .map((time) => ({ diff: calcTimeDiff(baseTime, time), time }))
     .sort((a, b) => a.diff - b.diff)[0].time;
+};
+
+export const createLocationReplyMarkup = (locationId: string): InlineKeyboardMarkup => {
+  return {
+    inline_keyboard: [
+      [
+        { text: 'delete', callback_data: `delete_location#${locationId}` },
+      ],
+    ],
+  };
 };
