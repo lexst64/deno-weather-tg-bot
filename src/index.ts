@@ -22,6 +22,8 @@ bot.use(session({
     locations: [],
     notifTimes: [],
     suggestedLocations: [],
+    timeZone: null,
+    suggestedTimeZones: [],
     timeoutId: 0,
   }),
   /**

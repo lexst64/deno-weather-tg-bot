@@ -95,3 +95,13 @@ export const createSuggestedLocationReplyMarkup = (locationId: string): InlineKe
     ],
   };
 };
+
+export const createSuggestedTimeZonaReplyMarkup = (timeZoneId: string): InlineKeyboardMarkup => {
+  return {
+    inline_keyboard: [
+      [
+        { text: 'select', callback_data: `select_time_zone#${timeZoneId}` },
+      ],
+    ],
+  };
+};

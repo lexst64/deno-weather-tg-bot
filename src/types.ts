@@ -21,10 +21,18 @@ export interface Time {
   seconds: number;
 }
 
+export interface SuggestedTimeZone {
+  id: string;
+  timeZone: string;
+  messageId: number;
+}
+
 export interface SessionData {
   locations: Location[];
   notifTimes: Time[];
   suggestedLocations: SuggestedLocation[];
+  timeZone: string | null;
+  suggestedTimeZones: SuggestedTimeZone[];
   timeoutId: number;
 }
 
