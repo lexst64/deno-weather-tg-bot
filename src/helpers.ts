@@ -85,3 +85,13 @@ export const createLocationReplyMarkup = (locationId: string): InlineKeyboardMar
     ],
   };
 };
+
+export const createSuggestedLocationReplyMarkup = (locationId: string): InlineKeyboardMarkup => {
+  return {
+    inline_keyboard: [
+      [
+        { text: 'select', callback_data: `select_location#${locationId}` },
+      ],
+    ],
+  };
+};

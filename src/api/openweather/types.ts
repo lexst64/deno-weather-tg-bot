@@ -6,7 +6,7 @@ export type MeasurementUnit = 'standart' | 'metric' | 'imperial';
 /**
  * @see https://openweathermap.org/api/geocoding-api#reverse
  */
-export interface ReverseGeocoding {
+export interface Geocoding {
   name: string;
   local_names: Map<string, string>;
   lat: number;
