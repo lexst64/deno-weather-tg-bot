@@ -11,6 +11,10 @@ export interface Location {
   lon: number;
 }
 
+export interface SuggestedLocation extends Location {
+  messageId: number;
+}
+
 export interface Time {
   hours: number;
   minutes: number;
@@ -20,6 +24,7 @@ export interface Time {
 export interface SessionData {
   locations: Location[];
   notifTimes: Time[];
+  suggestedLocations: SuggestedLocation[];
   timeoutId: number;
 }
 

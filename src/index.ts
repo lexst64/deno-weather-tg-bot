@@ -21,6 +21,7 @@ bot.use(session({
   initial: (): SessionData => ({
     locations: [],
     notifTimes: [],
+    suggestedLocations: [],
     timeoutId: 0,
   }),
   /**

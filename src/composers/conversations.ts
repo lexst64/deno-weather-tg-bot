@@ -1,40 +1,90 @@
 import { Composer } from 'https://deno.land/x/grammy@v1.10.1/composer.ts';
+import { Location } from 'https://deno.land/x/grammy@v1.10.1/platform.deno.ts';
 import {
   conversations,
   createConversation,
 } from 'https://deno.land/x/grammy_conversations@v1.0.2/conversation.ts';
+import { Geocoding } from '../api/openweather/types.ts';
+import { createSuggestedLocationReplyMarkup } from '../helpers.ts';
 import { openweathermap } from '../index.ts';
-import { BotContext, BotConversation, Location } from '../types.ts';
+import { BotContext, BotConversation, SuggestedLocation } from '../types.ts';
 
 const composer = new Composer<BotContext>();
 
-const addLocation = async (conversation: BotConversation, ctx: BotContext) => {
-  await ctx.reply('please, send your location');
-  ctx = await conversation.waitFor('message:location', async (ctx) => {
-    await ctx.reply('it is not a location :(');
-  });
+const fetchGeocodings = async (location: string | Location): Promise<Geocoding[]> => {
+  let geocodings: Geocoding[];
 
-  if (!ctx.message || !ctx.message.location) {
-    console.log(
-      `log: ${!ctx.message ? 'ctx.message' : 'ctx.message.location'} is undefined (not received)`,
-    );
-    await ctx.reply('Something went wrong. Try again please');
-    return;
+  try {
+    if (typeof location === 'string') {
+      geocodings = await openweathermap.geocoding(location);
+    } else {
+      geocodings = await openweathermap.reverseGeocoding(location.latitude, location.longitude);
+    }
+  } catch (e) {
+    console.log(e);
+    throw 'Something went wrong. Try again please';
   }
 
-  const { latitude: lat, longitude: lon } = ctx.message.location;
+  if (!geocodings.length) {
+    throw 'nothing found by this locaiton name, try another one';
+  }
 
-  const location: Location = {
-    id: await conversation.external(() => crypto.randomUUID()),
-    name: await conversation.external(() => openweathermap.locationName(lat, lon)),
-    lat,
-    lon,
-  };
+  return geocodings;
+};
 
-  ctx.session.locations.push(location);
-  return await ctx.reply(
-    `Location '${location.name}' has been added to your location list. /locations - to see the whole list`,
-  );
+const addLocation = async (conversation: BotConversation, ctx: BotContext) => {
+  await ctx.reply('please, send geolocation or location name');
+
+  let geocodings: Geocoding[];
+
+  while (true) {
+    ctx = await conversation.waitFor('message', async (ctx) => {
+      await ctx.reply('it is not a message :(');
+    });
+
+    if (ctx.hasCommand('exit')) {
+      await ctx.reply('ok, exited');
+      return;
+    }
+
+    if (!ctx.message) {
+      console.log(
+        `log: ctx.message is undefined (not received)`,
+      );
+      await ctx.reply('Something went wrong. Try again please');
+      continue;
+    }
+
+    const location: string | Location | undefined = ctx.message.text || ctx.message.location;
+    if (location) {
+      try {
+        geocodings = await fetchGeocodings(location);
+      } catch (e) {
+        await ctx.reply(e);
+        continue;
+      }
+      break;
+    }
+
+    await ctx.reply('geolocation or location name are exptected, try again');
+  }
+
+  ctx.session.suggestedLocations = [];
+  geocodings.map(async (geocoding) => {
+    const id = crypto.randomUUID();
+    const name = `${geocoding.name}, ${
+      geocoding.state ? `${geocoding.state}, ${geocoding.country}` : geocoding.country
+    }`;
+    const message = await ctx.reply(name, { reply_markup: createSuggestedLocationReplyMarkup(id) });
+    const suggestedLocation: SuggestedLocation = {
+      id,
+      name,
+      lat: geocoding.lat,
+      lon: geocoding.lon,
+      messageId: message.message_id,
+    };
+    ctx.session.suggestedLocations.push(suggestedLocation);
+  });
 };
 
 const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
