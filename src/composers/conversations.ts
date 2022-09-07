@@ -7,7 +7,7 @@ import {
 import { Geocoding } from '../api/openweather/types.ts';
 import { createSuggestedLocationReplyMarkup } from '../helpers.ts';
 import { openweathermap } from '../index.ts';
-import { BotContext, BotConversation, SuggestedLocation } from '../types.ts';
+import { BotContext, BotConversation } from '../types.ts';
 
 const composer = new Composer<BotContext>();
 
@@ -75,15 +75,18 @@ const addLocation = async (conversation: BotConversation, ctx: BotContext) => {
     const name = `${geocoding.name}, ${
       geocoding.state ? `${geocoding.state}, ${geocoding.country}` : geocoding.country
     }`;
-    const message = await ctx.reply(name, { reply_markup: createSuggestedLocationReplyMarkup(id) });
-    const suggestedLocation: SuggestedLocation = {
+    const messageId = (await ctx.reply(
+      name,
+      { reply_markup: createSuggestedLocationReplyMarkup(id) },
+    )).message_id;
+
+    ctx.session.suggestedLocations.push({
       id,
       name,
+      messageId,
       lat: geocoding.lat,
       lon: geocoding.lon,
-      messageId: message.message_id,
-    };
-    ctx.session.suggestedLocations.push(suggestedLocation);
+    });
   });
 };
 
